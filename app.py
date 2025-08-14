@@ -7,18 +7,17 @@ from googleapiclient.discovery import build
 
 app = Flask(__name__)
 
-# Configurações via variáveis de ambiente
-ACCESS_TOKEN = os.getenv('ACCESS_TOKEN')          # Token de página com permissões Instagram
-VERIFY_TOKEN = os.getenv('VERIFY_TOKEN')          # Token para validar webhook
-IG_USER_ID = os.getenv('IG_USER_ID')              # ID da conta comercial Instagram
-SPREADSHEET_ID = os.getenv('SHEET_ID')           # ID da planilha do Google Sheets
-SHEET_NAME = os.getenv('SHEET_NAME') or 'Links'  # Nome da aba
+# Configurações
+ACCESS_TOKEN = os.getenv('ACCESS_TOKEN')  # Page Access Token com permissões do Instagram
+VERIFY_TOKEN = os.getenv('VERIFY_TOKEN')  # token que você definiu para verificar webhook
+IG_USER_ID = os.getenv('IG_USER_ID')      # ID da conta Instagram Business
+SPREADSHEET_ID = os.getenv('SHEET_ID')
+SHEET_NAME = os.getenv('SHEET_NAME') or 'Links'
 
-# JSON das credenciais do Google como string (Render)
+# Carrega credenciais do Google (Sheets API)
 GOOGLE_CREDENTIALS_JSON = os.getenv('GOOGLE_CREDENTIALS')
 
 def carregar_links_da_planilha():
-    """Carrega os links da planilha do Google Sheets"""
     if GOOGLE_CREDENTIALS_JSON:
         creds_info = json.loads(GOOGLE_CREDENTIALS_JSON)
         creds = Credentials.from_service_account_info(
@@ -26,16 +25,17 @@ def carregar_links_da_planilha():
             scopes=['https://www.googleapis.com/auth/spreadsheets.readonly']
         )
     else:
-        # fallback para arquivo local
-        GOOGLE_API_CREDENTIALS_FILE = 'credentials.json'
         creds = Credentials.from_service_account_file(
-            GOOGLE_API_CREDENTIALS_FILE,
+            'credentials.json',
             scopes=['https://www.googleapis.com/auth/spreadsheets.readonly']
         )
 
     service = build('sheets', 'v4', credentials=creds)
     sheet = service.spreadsheets()
-    result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=SHEET_NAME).execute()
+    result = sheet.values().get(
+        spreadsheetId=SPREADSHEET_ID,
+        range=SHEET_NAME
+    ).execute()
     values = result.get('values', [])
 
     links_por_reel = {}
@@ -46,7 +46,8 @@ def carregar_links_da_planilha():
             links_por_reel[media_id] = link
     return links_por_reel
 
-ef enviar_dm(user_id, mensagem):
+def enviar_dm(user_id, mensagem):
+    """Envia mensagem no Instagram Direct usando API v23.0"""
     url = f"https://graph.facebook.com/v23.0/{IG_USER_ID}/messages"
     headers = {"Content-Type": "application/json"}
     data = {
@@ -59,10 +60,11 @@ ef enviar_dm(user_id, mensagem):
 
 @app.route('/webhook', methods=['GET'])
 def verify():
-    """Verifica o webhook"""
+    """Verificação do webhook no painel do Meta Developers"""
     mode = request.args.get('hub.mode')
     token = request.args.get('hub.verify_token')
     challenge = request.args.get('hub.challenge')
+
     if mode == 'subscribe' and token == VERIFY_TOKEN:
         return challenge, 200
     else:
@@ -72,8 +74,9 @@ def verify():
 def webhook():
     """Recebe eventos do Instagram"""
     data = request.json
-    print("Recebido webhook:", json.dumps(data, indent=2))  # Debug
+    print("Recebido webhook:", json.dumps(data, indent=2))
 
+    # Carrega a lista de links da planilha
     links_por_reel = carregar_links_da_planilha()
 
     try:
@@ -81,15 +84,16 @@ def webhook():
         change = entry['changes'][0]
         value = change['value']
 
-        # Pega o user_id do comentário
+        # ID do usuário que comentou
         user_id = value['from']['id']
 
-        # Pega o texto do comentário
+        # Texto do comentário
         texto = value.get('text', '').lower()
 
-        # Pega o media_id correto (qualquer chave que não seja 'from' ou 'text')
+        # Detecta o media_id (qualquer chave que não seja 'from' ou 'text')
         media_id = next((k for k in value.keys() if k not in ['from', 'text']), None)
 
+        # Se o comentário contiver "quero" e existir link para o media_id
         if texto and "quero" in texto and media_id and media_id in links_por_reel:
             link = links_por_reel[media_id]
             mensagem = f"Aqui está o link do produto que você pediu: {link}"
