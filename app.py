@@ -8,10 +8,10 @@ from googleapiclient.discovery import build
 app = Flask(__name__)
 
 # Configurações
-ACCESS_TOKEN = os.getenv('FB_ACCESS_TOKEN') or 'EAALU9aMqtiwBPC4AtEKkGUUdZAdWFyhcy4ZBFZCK5Y9ChZCFwm7UbUnVO90i0kwdHA5hRisClgr7bZBiV6b5nUHZB2ahDCMSMreMnXdiZARvENJFxdWXZBghtJXuH3wi00FpaNq2jtm7ZCRvW8Nib29hB9OXgGC06kVFInwE5qtMJcveQD8ifuevfhntqb9bEeZAvZBWJGMaBWLMmEwvVaFJZAgEnPc5Jo2ZC8ZAIyN7ZBHIBEkw8MZAg9Q3hAZDZD'
-VERIFY_TOKEN = os.getenv('FB_VERIFY_TOKEN') or 'verif123'
-IG_USER_ID = os.getenv('IG_USER_ID') or '17841472947342923'
-SPREADSHEET_ID = os.getenv('SPREADSHEET_ID') or '1u2ovXMoDdVt2r1tYzW03ChOZ9Hiv4yCaTnTn1hFrbs4'
+ACCESS_TOKEN = os.getenv('ACCESS_TOKEN')
+VERIFY_TOKEN = os.getenv('VERIFY_TOKEN')
+IG_USER_ID = os.getenv('IG_USER_ID')
+SPREADSHEET_ID = os.getenv('SHEET_ID')
 SHEET_NAME = os.getenv('SHEET_NAME') or 'Links'
 
 # Lê as credenciais do Google de variável de ambiente
