@@ -46,9 +46,8 @@ def carregar_links_da_planilha():
             links_por_reel[media_id] = link
     return links_por_reel
 
-def enviar_dm(user_id, mensagem):
-    """Envia DM para usuário via Instagram Graph API"""
-    url = f"https://graph.facebook.com/v15.0/{IG_USER_ID}/messages"
+ef enviar_dm(user_id, mensagem):
+    url = f"https://graph.facebook.com/v23.0/{IG_USER_ID}/messages"
     headers = {"Content-Type": "application/json"}
     data = {
         "recipient": {"id": user_id},
