@@ -7,22 +7,35 @@ from googleapiclient.discovery import build
 
 app = Flask(__name__)
 
-# Configurações - coloque seus valores aqui ou use variáveis de ambiente
+# Configurações
 ACCESS_TOKEN = os.getenv('FB_ACCESS_TOKEN') or 'SEU_ACCESS_TOKEN_AQUI'
 VERIFY_TOKEN = os.getenv('FB_VERIFY_TOKEN') or 'verif123'
 IG_USER_ID = os.getenv('IG_USER_ID') or 'SEU_IG_USER_ID_AQUI'
-GOOGLE_API_CREDENTIALS_FILE = os.getenv('GOOGLE_API_CREDENTIALS_FILE') or 'credentials.json'
 SPREADSHEET_ID = os.getenv('SPREADSHEET_ID') or 'SEU_SPREADSHEET_ID_AQUI'
-SHEET_NAME = os.getenv('SHEET_NAME') or 'Links'  # Nome da aba onde estão media_id e links
+SHEET_NAME = os.getenv('SHEET_NAME') or 'Links'
 
+# Lê as credenciais do Google de variável de ambiente
+GOOGLE_CREDENTIALS_JSON = os.getenv('GOOGLE_CREDENTIALS')  # coloque todo o conteúdo do JSON aqui no Render
 def carregar_links_da_planilha():
-    creds = Credentials.from_service_account_file(GOOGLE_API_CREDENTIALS_FILE, scopes=['https://www.googleapis.com/auth/spreadsheets.readonly'])
+    if GOOGLE_CREDENTIALS_JSON:
+        creds_info = json.loads(GOOGLE_CREDENTIALS_JSON)
+        creds = Credentials.from_service_account_info(
+            creds_info,
+            scopes=['https://www.googleapis.com/auth/spreadsheets.readonly']
+        )
+    else:
+        # fallback para arquivo local
+        GOOGLE_API_CREDENTIALS_FILE = 'credentials.json'
+        creds = Credentials.from_service_account_file(
+            GOOGLE_API_CREDENTIALS_FILE,
+            scopes=['https://www.googleapis.com/auth/spreadsheets.readonly']
+        )
+
     service = build('sheets', 'v4', credentials=creds)
     sheet = service.spreadsheets()
     result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=SHEET_NAME).execute()
     values = result.get('values', [])
 
-    # Espera-se que a planilha tenha duas colunas: media_id | link
     links_por_reel = {}
     for row in values:
         if len(row) >= 2:
@@ -55,7 +68,7 @@ def verify():
 @app.route('/webhook', methods=['POST'])
 def webhook():
     data = request.json
-    print("Recebido webhook:", json.dumps(data, indent=2))  # Debug
+    print("Recebido webhook:", json.dumps(data, indent=2))
     
     links_por_reel = carregar_links_da_planilha()
 
