@@ -68,8 +68,9 @@ def verify():
 @app.route('/webhook', methods=['POST'])
 def webhook():
     data = request.json
-    print("Recebido webhook:", json.dumps(data, indent=2))
-    
+    print("Recebido webhook:", json.dumps(data, indent=2))  # Debug
+
+    # Carrega links da planilha
     links_por_reel = carregar_links_da_planilha()
 
     try:
@@ -77,11 +78,16 @@ def webhook():
         change = entry['changes'][0]
         value = change['value']
 
-        media_id = value.get('media_id')
+        # Pega o user_id do comentário
         user_id = value['from']['id']
+
+        # Pega o texto do comentário
         texto = value.get('text', '').lower()
 
-        if "quero" in texto and media_id in links_por_reel:
+        # Pega o media_id correto (qualquer chave que não seja 'from' ou 'text')
+        media_id = next((k for k in value.keys() if k not in ['from', 'text']), None)
+
+        if texto and "quero" in texto and media_id and media_id in links_por_reel:
             link = links_por_reel[media_id]
             mensagem = f"Aqui está o link do produto que você pediu: {link}"
             enviar_dm(user_id, mensagem)
