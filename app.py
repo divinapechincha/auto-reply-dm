@@ -7,16 +7,18 @@ from googleapiclient.discovery import build
 
 app = Flask(__name__)
 
-# Configurações
-ACCESS_TOKEN = os.getenv('ACCESS_TOKEN')
-VERIFY_TOKEN = os.getenv('VERIFY_TOKEN')
-IG_USER_ID = os.getenv('IG_USER_ID')
-SPREADSHEET_ID = os.getenv('SHEET_ID')
-SHEET_NAME = os.getenv('SHEET_NAME') or 'Links'
+# Configurações via variáveis de ambiente
+ACCESS_TOKEN = os.getenv('ACCESS_TOKEN')          # Token de página com permissões Instagram
+VERIFY_TOKEN = os.getenv('VERIFY_TOKEN')          # Token para validar webhook
+IG_USER_ID = os.getenv('IG_USER_ID')              # ID da conta comercial Instagram
+SPREADSHEET_ID = os.getenv('SHEET_ID')           # ID da planilha do Google Sheets
+SHEET_NAME = os.getenv('SHEET_NAME') or 'Links'  # Nome da aba
 
-# Lê as credenciais do Google de variável de ambiente
-GOOGLE_CREDENTIALS_JSON = os.getenv('GOOGLE_CREDENTIALS')  # coloque todo o conteúdo do JSON aqui no Render
+# JSON das credenciais do Google como string (Render)
+GOOGLE_CREDENTIALS_JSON = os.getenv('GOOGLE_CREDENTIALS')
+
 def carregar_links_da_planilha():
+    """Carrega os links da planilha do Google Sheets"""
     if GOOGLE_CREDENTIALS_JSON:
         creds_info = json.loads(GOOGLE_CREDENTIALS_JSON)
         creds = Credentials.from_service_account_info(
@@ -45,7 +47,8 @@ def carregar_links_da_planilha():
     return links_por_reel
 
 def enviar_dm(user_id, mensagem):
-    url = f"https://graph.facebook.com/v15.0/me/messages"
+    """Envia DM para usuário via Instagram Graph API"""
+    url = f"https://graph.facebook.com/v15.0/{IG_USER_ID}/messages"
     headers = {"Content-Type": "application/json"}
     data = {
         "recipient": {"id": user_id},
@@ -57,6 +60,7 @@ def enviar_dm(user_id, mensagem):
 
 @app.route('/webhook', methods=['GET'])
 def verify():
+    """Verifica o webhook"""
     mode = request.args.get('hub.mode')
     token = request.args.get('hub.verify_token')
     challenge = request.args.get('hub.challenge')
@@ -67,10 +71,10 @@ def verify():
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
+    """Recebe eventos do Instagram"""
     data = request.json
     print("Recebido webhook:", json.dumps(data, indent=2))  # Debug
 
-    # Carrega links da planilha
     links_por_reel = carregar_links_da_planilha()
 
     try:
